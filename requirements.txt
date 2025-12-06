@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+torch
+numpy
+open_clip_torch
+requests
+python-multipart
+pydantic
+huggingface_hub
+datasets
+pillow
+google-generativeai
+diffusers
+transformers
+accelerate
+scipy
+peft
