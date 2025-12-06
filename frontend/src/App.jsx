@@ -12,13 +12,11 @@ import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'fra
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-// --- CONFIGURATION ---
 const API_URL = "https://migueldiaz1-mirage-backend.hf.space";  
 const PROJECT_URL = "https://arxiv.org/abs/2400.00000"; 
 const KAGGLE_URL = "https://www.kaggle.com/code/migueldazbenito/mirage"; 
 const YOUTUBE_VIDEO_ID = "GlPMrBWtZoQ"; 
 
-// --- DATA (ENGLISH) ---
 const MEDICAL_PROMPTS = [
     { title: "Glioblastoma Multiforme", text: "MRI of the brain showing a large necrotic glioblastoma in the frontal lobe with edema." },
     { title: "Liver Metastasis", text: "CT scan of the abdomen showing multiple hypodense metastatic lesions in the liver." },
@@ -31,7 +29,6 @@ const DUAL_ARITHMETIC_EXAMPLES = [
     { title: "Cardiac Pacemaker", query: "Chest X-ray", add: "Pacemaker generator and leads", sub: "No foreign bodies", desc: "Add a pacemaker to the chest X-ray." }
 ];
 
-// --- UTILS ---
 function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
@@ -51,7 +48,6 @@ const RichText = ({ text, className }) => {
     );
 };
 
-// --- ANIMATION VARIANTS ---
 const pageTransition = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -69,7 +65,6 @@ const cardVariant = {
   show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 40, damping: 10 } }
 };
 
-// --- VISUAL COMPONENTS ---
 
 const OpticalGradient = () => {
     return (
@@ -156,9 +151,6 @@ const KaggleLogo = ({ className }) => (
     </svg>
 );
 
-// ==========================================
-// [PREMIUM COMPONENT] Paper Explanation Page
-// ==========================================
 const PaperExplanation = ({ onBack }) => {
     const containerRef = useRef(null);
     const { scrollYProgress } = useScroll({ container: containerRef });
@@ -487,7 +479,6 @@ const PaperExplanation = ({ onBack }) => {
 };
 
 
-// --- WELCOME SCREEN (MODIFIED) ---
 const WelcomeScreen = ({ onStart, onOpenPaper }) => {
   return (
     <motion.div 
@@ -564,7 +555,6 @@ const WelcomeScreen = ({ onStart, onOpenPaper }) => {
   );
 };
 
-// UI HELPERS (Sliders, Counters, Checkboxes, Inputs)
 const ParameterSlider = ({ icon: Icon, label, value, onChange, min, max, step, description, formatValue }) => {
     return (
         <div className="space-y-2">
@@ -694,7 +684,6 @@ const InputField = ({ icon: Icon, value, onChange, placeholder, color = "orange"
         }
     }, [value]);
     
-    // Gradient definitions for borders
     const gradients = {
         red: "bg-[conic-gradient(transparent,rgba(239,68,68,1),transparent,rgba(239,68,68,1),transparent)]",
         rose: "bg-[conic-gradient(transparent,rgba(244,63,94,1),transparent,rgba(244,63,94,1),transparent)]",
@@ -728,8 +717,6 @@ const InputField = ({ icon: Icon, value, onChange, placeholder, color = "orange"
         </div>
     );
 };
-
-// --- DEFINICIONES FALTANTES (MOVIDAS ANTES DE MainInterface) ---
 
 const Column = ({ title, query, color, children }) => (
     <div className="space-y-6">
@@ -811,7 +798,6 @@ const DescriptionBox = ({ text, title }) => {
     );
 };
 
-// 3. MAIN APP INTERFACE
 const MainInterface = ({ onBack }) => { 
   const [query, setQuery] = useState('');
   const [topK, setTopK] = useState(1); 
@@ -1183,9 +1169,8 @@ const MainInterface = ({ onBack }) => {
   );
 };
 
-// --- EXPORTACIÓN FINAL DE LA APP ---
 export default function App() {
-  const [mode, setMode] = useState('welcome'); // Estados: 'welcome', 'app', 'paper'
+  const [mode, setMode] = useState('welcome'); // States available: 'welcome', 'app', 'paper'
   
   return (
     <AnimatePresence mode="wait">
