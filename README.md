@@ -1,117 +1,115 @@
 <div align="center">
 
-# 🟠 MIRAGE
-### Retrieval and Generation of Multimodal Images and Texts for Medical Education
+<h1 style="color: #F97316; font-size: 3em;">MIRAGE</h1>
+<h3 style="color: #FDBA74;">Retrieval and Generation of Multimodal Images and Texts for Medical Education</h3>
 
-<img src="https://img.shields.io/badge/MICCAI-2025-orange?style=for-the-badge&logo=fireship" alt="MICCAI 2025" />
-<img src="https://img.shields.io/badge/STATUS-LIVE-red?style=for-the-badge&logo=statuspage" alt="Status Live" />
+<img src="https://img.shields.io/badge/MICCAI-2025-orange?style=for-the-badge" alt="MICCAI 2025" />
+<img src="https://img.shields.io/badge/STATUS-LIVE-red?style=for-the-badge" alt="Status Live" />
 <img src="https://img.shields.io/badge/BUILD-v1.0-amber?style=for-the-badge" alt="Build v1.0" />
+
+<br/><br/>
+
+<h2 style="color: #F97316;">SYSTEM ACCESS POINTS</h2>
+
+<table style="border: none;">
+<tr>
+<td align="center" width="33%">
+<a href="https://effulgent-duckanoo-083431.netlify.app/">
+<img src="https://img.shields.io/badge/Frontend_UI-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=black" height="35" />
+</a>
+<br/>
+<b>Interactive Web App</b>
+</td>
+<td align="center" width="33%">
+<a href="https://huggingface.co/spaces/Migueldiaz1/mirage-backend">
+<img src="https://img.shields.io/badge/Backend_API-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" height="35" />
+</a>
+<br/>
+<b>API Server</b>
+</td>
+<td align="center" width="33%">
+<a href="https://www.kaggle.com/code/migueldazbenito/mirage">
+<img src="https://img.shields.io/badge/Source_Code-Kaggle-20BEFF?style=for-the-badge&logo=kaggle&logoColor=white" height="35" />
+</a>
+<br/>
+<b>Notebook & Pipeline</b>
+</td>
+</tr>
+</table>
 
 <br/>
 
 <p align="center">
-  <a href="https://effulgent-duckanoo-083431.netlify.app/">
-    <img src="https://img.shields.io/badge/🚀_Frontend-Netlify-00C7B7?style=plastic&logo=netlify" height="35" />
-  </a>
-  <a href="https://huggingface.co/spaces/Migueldiaz1/mirage-backend">
-    <img src="https://img.shields.io/badge/⚡_Backend-Hugging_Face-FFD21E?style=plastic&logo=huggingface" height="35" />
-  </a>
-  <a href="https://www.kaggle.com/code/migueldazbenito/mirage">
-    <img src="https://img.shields.io/badge/📘_Notebook-Kaggle-20BEFF?style=plastic&logo=kaggle" height="35" />
-  </a>
-</p>
-
-<p align="center">
-  <b>Explore Medical Latent Spaces.</b> <br/>
-  <i>Retrieval. Synthesis. Vector Arithmetic.</i>
+  <b>Retrieval. Synthesis. Vector Arithmetic.</b>
 </p>
 
 </div>
 
 ---
 
-## ⚡ Overview
+<h2 style="color: #F97316;">OVERVIEW</h2>
 
-**MIRAGE** is a multimodal system designed to revolutionize medical education by allowing students to navigate the complex relationships between medical texts and images. 
+<strong style="color: #F97316;">MIRAGE</strong> is a multimodal system designed to revolutionize medical education. [cite_start]It allows students to navigate the complex relationships between medical texts and images through a shared latent space[cite: 7].
 
-Unlike static atlases or unreliable web searches, MIRAGE projects medical concepts into a shared high-dimensional latent space. This allows for semantic retrieval, synthetic image generation, and—most importantly—**conceptual algebra**, enabling users to mathematically modify medical conditions (e.g., subtracting "bones" from an X-ray query).
-
-The system is fully deployed and accessible via the links above.
+[cite_start]Unlike static atlases or unreliable web searches[cite: 6], MIRAGE enables semantic retrieval, synthetic image generation, and <strong style="color: #F97316;">conceptual algebra</strong>. [cite_start]This allows users to mathematically modify medical conditions (e.g., "Subtract Bones" from a "Chest X-Ray") to visualize specific pathologies[cite: 50, 115].
 
 ---
 
-## 🔬 Based on MICCAI 2025 Research
+<h2 style="color: #F97316;">MICCAI 2025 PAPER</h2>
 
-This project is the official implementation of the paper:
-> **MIRAGE: Retrieval and Generation of Multimodal Images and Texts for Medical Education** > *Presented at the 4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025.*
+[cite_start]This project is the official implementation of the research presented at the <strong style="color: #F97316;">4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025</strong>[cite: 1, 2].
 
-The core research focuses on using a **CLIP model fine-tuned on the ROCO (Radiology Objects in Context) dataset** to align visual and textual medical data. This alignment enables the system to "understand" that a chest X-ray and the text "pleural effusion" reside in the same semantic neighborhood.
+[cite_start]The system is built upon a fine-tuned medical version of <strong style="color: #F97316;">CLIP (MedICaT-ROCO)</strong> trained on the ROCO dataset[cite: 8]. [cite_start]It maps both text and images to a shared latent space, enabling semantically meaningful queries[cite: 7, 62].
 
-### Core Paper Features:
-* **Multimodal Retrieval:** Text-to-Image search grounded in verified medical data (ROCO).
-* **Generative AI:** Using Stable Diffusion to synthesize unseen pathologies.
-* **LLM Enrichment:** Generating detailed radiology reports using Dolly-v2/BioGPT.
-* **Dual Search (Latent Arithmetic):** Modifying queries via vector operations.
+<h3 style="color: #FDBA74;">Core Research Features</h3>
 
----
-
-## 🚀 Optimization: Changes from the Paper
-
-To ensure this web deployment provides a **blazing fast** user experience on standard CPU/Cloud environments (like Hugging Face Spaces free tier), we have engineered several optimizations compared to the original research pipeline.
-
-### 1. Precomputed Vector Embeddings (Speed ⚡)
-In the research paper, the system encodes the dataset dynamically. For this deployment, we have **precomputed and cached the embeddings** for the entire ROCO dataset.
-* **Paper:** Runtime encoding of images.
-* **Deployment:** `O(1)` access time. The visual vectors are loaded directly into memory, allowing for instant cosine similarity searches without needing to run the heavy CLIP Vision Transformer on the dataset for every query.
-
-### 2. Latent Consistency Models (LCM) (Generation ⚡)
-Generating synthetic medical images with standard Stable Diffusion takes 25-50 inference steps (approx. 40-60 seconds on CPU).
-* **Deployment:** We utilize **LCM (Latent Consistency Models)** LoRAs. This distills the diffusion process, allowing us to generate high-fidelity medical images in just **4-8 steps**.
-* **Result:** Generation time is slashed from ~1 minute to mere seconds, making the tool interactive.
-
-### 3. Metadata Indexing
-Captions and image paths are indexed in a lightweight JSON structure, decoupled from the heavy model weights, ensuring the UI remains responsive even during heavy computation.
+* [cite_start]<strong style="color: #F97316;">Multimodal Retrieval:</strong> Finds clinically relevant images from verified sources[cite: 7].
+* [cite_start]<strong style="color: #F97316;">Latent Arithmetic (Dual Search):</strong> Enables visual comparison of different medical conditions by subtracting/adding concept vectors[cite: 10, 49].
+* [cite_start]<strong style="color: #F97316;">Generative AI:</strong> Synthesizes new medical images using diffusion models[cite: 9].
+* [cite_start]<strong style="color: #F97316;">LLM Enrichment:</strong> Generates detailed descriptions using Large Language Models[cite: 9].
 
 ---
 
-## 🧠 How It Works: The "Dual Search"
+<h2 style="color: #F97316;">OPTIMIZATIONS: CHANGES FROM THE PAPER</h2>
 
-The most powerful feature of MIRAGE is **Latent Space Arithmetic**. We don't just search for keywords; we perform math on concepts.
+To ensure this web deployment runs efficiently on standard CPU environments (like the Hugging Face free tier) without requiring the heavy GPU resources described in the original paper, we have implemented specific engineering optimizations.
 
-When a user runs a Dual Search, the system calculates a new vector $\vec{v}_{final}$:
+<h3 style="color: #FDBA74;">1. Precomputed Embeddings (Speed Optimization)</h3>
+[cite_start]While the paper describes a pipeline that processes images dynamically[cite: 61], this deployment uses <strong style="color: #F97316;">precomputed vector embeddings</strong>.
+* **Paper:** CLIP Vision Transformer runs in real-time.
+* **Web Deployment:** We cached the CLIP embeddings for the ROCO dataset. This allows for <strong style="color: #F97316;">O(1) retrieval speed</strong>, skipping the heavy visual encoding step during user queries.
 
-$$\vec{v}_{final} = \vec{v}_{query} - \vec{v}_{subtract} + \vec{v}_{add}$$
+<h3 style="color: #FDBA74;">2. Latent Consistency Models (LCM)</h3>
+[cite_start]The paper utilizes *Prompt2MedImage* (Standard Stable Diffusion) which typically requires 50 steps for high-quality generation[cite: 9, 142].
+* **Paper:** High inference time (~40-60s).
+* **Web Deployment:** We utilize <strong style="color: #F97316;">LCM (Latent Consistency Models)</strong>. This reduces the inference requirement to just <strong style="color: #F97316;">4-8 steps</strong>, enabling image synthesis in seconds on a CPU.
 
-**Example:**
-1.  **Query:** "Chest X-Ray"
-2.  **Subtract:** "Bones"
-3.  **Add:** "Soft Tissue"
-4.  **Result:** The system navigates to a point in latent space representing a "Bone Suppression" image, retrieving real examples and generating synthetic ones that match this new concept.
-
----
-
-## 🛠️ Architecture
-
-| Component | Technology | Role |
-| :--- | :--- | :--- |
-| **Frontend** | React + Tailwind + Framer Motion | Cyberpunk/Dark UI, State Management |
-| **Backend** | Python (FastAPI/Gradio) | API Endpoints, Model Inference |
-| **Retrieval** | CLIP (MedICaT) | Embedding Medical Text & Images |
-| **Generation** | Stable Diffusion + LCM | Fast Synthetic Image Creation |
-| **Dataset** | ROCO (PubMed) | Ground Truth Medical Data |
+<h3 style="color: #FDBA74;">3. Metadata Indexing</h3>
+We decoupled the dataset metadata (captions, paths) into a lightweight JSON structure. This ensures the search engine remains responsive and lightweight, loading only the necessary textual data for the results.
 
 ---
 
-## 📦 Deployment & Usage
+<h2 style="color: #F97316;">HOW IT WORKS: LATENT ARITHMETIC</h2>
 
-### 🌐 Live Demo
-* **Frontend:** [Access the UI here](https://effulgent-duckanoo-083431.netlify.app/)
-* **Backend:** [View the Space](https://huggingface.co/spaces/Migueldiaz1/mirage-backend)
+[cite_start]The system enables concept-level comparison via latent space manipulation[cite: 51]. When a user defines a "Dual Search", we perform vector arithmetic:
 
-### 💻 Local Development
-If you wish to run the notebook or backend locally, please refer to the **Kaggle Notebook** linked above. It contains the complete installation pipeline:
+<h3 align="center" style="color: #F97316;">Vector<sub>modified</sub> = Vector<sub>query</sub> - Vector<sub>subtract</sub> + Vector<sub>add</sub></h3>
 
-```bash
-# Example setup from the notebook
-pip install diffusers transformers accelerate peft
-pip install gradio
+<br/>
+
+[cite_start]For example, subtracting the concept **"Bones"** from a **"Chest X-Ray"** vector forces the system to retrieve or generate soft-tissue specific visualizations[cite: 120, 124].
+
+---
+
+<h2 style="color: #F97316;">CITATION</h2>
+
+If you use MIRAGE in your research, please cite our MICCAI 2025 paper:
+
+```bibtex
+@inproceedings{diazbenito2025mirage,
+  title={MIRAGE: Retrieval and Generation of Multimodal Images and Texts for Medical Education},
+  author={Díaz Benito, Miguel and Diana-Albelda, Cecilia and García-Martín, Álvaro and Bescos, Jesus and Escudero Viñolo, Marcos and San Miguel, Juan Carlos},
+  booktitle={4th Workshop on Applications of Medical AI (AMAI), MICCAI},
+  year={2025},
+  organization={Springer}
+}
