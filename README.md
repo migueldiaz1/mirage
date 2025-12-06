@@ -3,10 +3,6 @@
 <h1 style="color: #F97316; font-size: 3em;">MIRAGE</h1>
 <h3 style="color: #FDBA74;">Retrieval and Generation of Multimodal Images and Texts for Medical Education</h3>
 
-<img src="https://img.shields.io/badge/MICCAI-2025-orange?style=for-the-badge" alt="MICCAI 2025" />
-<img src="https://img.shields.io/badge/STATUS-LIVE-red?style=for-the-badge" alt="Status Live" />
-<img src="https://img.shields.io/badge/BUILD-v1.0-amber?style=for-the-badge" alt="Build v1.0" />
-
 <br/><br/>
 
 <h2 style="color: #F97316;">SYSTEM ACCESS POINTS</h2>
