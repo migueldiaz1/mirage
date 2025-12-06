@@ -1,166 +1,117 @@
 <div align="center">
 
-<!-- TITLE & LOGO -->
+# 🟠 MIRAGE
+### Retrieval and Generation of Multimodal Images and Texts for Medical Education
 
-<img src="https://www.google.com/search?q=https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmVreXJ4bnl4bnl4bnl4bnl4bnl4bnl4bnl4bnl4bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LmcMtPdPlC5V2qGMQZ/giphy.gif" width="120" height="auto" style="border-radius: 50%; border: 2px solid #F97316;">
+<img src="https://img.shields.io/badge/MICCAI-2025-orange?style=for-the-badge&logo=fireship" alt="MICCAI 2025" />
+<img src="https://img.shields.io/badge/STATUS-LIVE-red?style=for-the-badge&logo=statuspage" alt="Status Live" />
+<img src="https://img.shields.io/badge/BUILD-v1.0-amber?style=for-the-badge" alt="Build v1.0" />
 
-🧠 MIRAGE OS
+<br/>
 
-Multimodal Interface for Retrieval & Augmented Generation in Education
+<p align="center">
+  <a href="https://effulgent-duckanoo-083431.netlify.app/">
+    <img src="https://img.shields.io/badge/🚀_Frontend-Netlify-00C7B7?style=plastic&logo=netlify" height="35" />
+  </a>
+  <a href="https://huggingface.co/spaces/Migueldiaz1/mirage-backend">
+    <img src="https://img.shields.io/badge/⚡_Backend-Hugging_Face-FFD21E?style=plastic&logo=huggingface" height="35" />
+  </a>
+  <a href="https://www.kaggle.com/code/migueldazbenito/mirage">
+    <img src="https://img.shields.io/badge/📘_Notebook-Kaggle-20BEFF?style=plastic&logo=kaggle" height="35" />
+  </a>
+</p>
 
-MICCAI 2025 | Fourth Workshop on Applications of Medical AI (AMAI)
-
-<!-- BADGES WITH CUSTOM COLORS (Orange/Red/Amber Theme) -->
-
-<p align="center" style="color: #9ca3af; font-family: monospace;">
-<i>"Redefining medical education through Latent Space Navigation."</i>
+<p align="center">
+  <b>Explore Medical Latent Spaces.</b> <br/>
+  <i>Retrieval. Synthesis. Vector Arithmetic.</i>
 </p>
 
 </div>
 
-⚡ Live Demos
+---
 
-Platform
+## ⚡ Overview
 
-Status
+**MIRAGE** is a multimodal system designed to revolutionize medical education by allowing students to navigate the complex relationships between medical texts and images. 
 
-Description
+Unlike static atlases or unreliable web searches, MIRAGE projects medical concepts into a shared high-dimensional latent space. This allows for semantic retrieval, synthetic image generation, and—most importantly—**conceptual algebra**, enabling users to mathematically modify medical conditions (e.g., subtracting "bones" from an X-ray query).
 
-Link
+The system is fully deployed and accessible via the links above.
 
-Hugging Face
+---
 
-🟢 Online
+## 🔬 Based on MICCAI 2025 Research
 
-Full Experience. Backend + Frontend running on HF Spaces.
+This project is the official implementation of the paper:
+> **MIRAGE: Retrieval and Generation of Multimodal Images and Texts for Medical Education** > *Presented at the 4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025.*
 
-Launch App
+The core research focuses on using a **CLIP model fine-tuned on the ROCO (Radiology Objects in Context) dataset** to align visual and textual medical data. This alignment enables the system to "understand" that a chest X-ray and the text "pleural effusion" reside in the same semantic neighborhood.
 
-Netlify
+### Core Paper Features:
+* **Multimodal Retrieval:** Text-to-Image search grounded in verified medical data (ROCO).
+* **Generative AI:** Using Stable Diffusion to synthesize unseen pathologies.
+* **LLM Enrichment:** Generating detailed radiology reports using Dolly-v2/BioGPT.
+* **Dual Search (Latent Arithmetic):** Modifying queries via vector operations.
 
-🟢 Online
+---
 
-Frontend Only. High-speed Edge deployment.
+## 🚀 Optimization: Changes from the Paper
 
-View UI
+To ensure this web deployment provides a **blazing fast** user experience on standard CPU/Cloud environments (like Hugging Face Spaces free tier), we have engineered several optimizations compared to the original research pipeline.
 
-Kaggle
+### 1. Precomputed Vector Embeddings (Speed ⚡)
+In the research paper, the system encodes the dataset dynamically. For this deployment, we have **precomputed and cached the embeddings** for the entire ROCO dataset.
+* **Paper:** Runtime encoding of images.
+* **Deployment:** `O(1)` access time. The visual vectors are loaded directly into memory, allowing for instant cosine similarity searches without needing to run the heavy CLIP Vision Transformer on the dataset for every query.
 
-📓 Notebook
+### 2. Latent Consistency Models (LCM) (Generation ⚡)
+Generating synthetic medical images with standard Stable Diffusion takes 25-50 inference steps (approx. 40-60 seconds on CPU).
+* **Deployment:** We utilize **LCM (Latent Consistency Models)** LoRAs. This distills the diffusion process, allowing us to generate high-fidelity medical images in just **4-8 steps**.
+* **Result:** Generation time is slashed from ~1 minute to mere seconds, making the tool interactive.
 
-Source Code. Reproducible pipeline on free T4 GPUs.
+### 3. Metadata Indexing
+Captions and image paths are indexed in a lightweight JSON structure, decoupled from the heavy model weights, ensuring the UI remains responsive even during heavy computation.
 
-Open Code
+---
 
-🧬 Project Overview
+## 🧠 How It Works: The "Dual Search"
 
-MIRAGE is a multimodal AI system designed to solve the reliability gap in medical education. While students often turn to Google Images for speed, they sacrifice accuracy. Medical Atlases offer accuracy but lack interactivity.
+The most powerful feature of MIRAGE is **Latent Space Arithmetic**. We don't just search for keywords; we perform math on concepts.
 
-MIRAGE bridges this gap by mapping medical text and images into a shared latent space, enabling:
+When a user runs a Dual Search, the system calculates a new vector $\vec{v}_{final}$:
 
-Semantic Retrieval: Search for pathologies by concept, not just keywords (e.g., "Ground glass opacity in lungs").
+$$\vec{v}_{final} = \vec{v}_{query} - \vec{v}_{subtract} + \vec{v}_{add}$$
 
-Latent Arithmetic (Dual Search): Algebraically modify medical concepts (e.g., Chest X-Ray - Bones + Soft Tissue).
+**Example:**
+1.  **Query:** "Chest X-Ray"
+2.  **Subtract:** "Bones"
+3.  **Add:** "Soft Tissue"
+4.  **Result:** The system navigates to a point in latent space representing a "Bone Suppression" image, retrieving real examples and generating synthetic ones that match this new concept.
 
-Generative AI: Create synthetic medical imagery on-demand using diffusion models.
+---
 
-🛠️ Paper vs. Reality: Optimizations for Deployment
+## 🛠️ Architecture
 
-This repository implements the architecture described in our MICCAI 2025 paper, but with specific engineering optimizations to ensure the system allows real-time inference on standard CPUs (or free tier cloud environments) without requiring massive GPU clusters.
+| Component | Technology | Role |
+| :--- | :--- | :--- |
+| **Frontend** | React + Tailwind + Framer Motion | Cyberpunk/Dark UI, State Management |
+| **Backend** | Python (FastAPI/Gradio) | API Endpoints, Model Inference |
+| **Retrieval** | CLIP (MedICaT) | Embedding Medical Text & Images |
+| **Generation** | Stable Diffusion + LCM | Fast Synthetic Image Creation |
+| **Dataset** | ROCO (PubMed) | Ground Truth Medical Data |
 
-Feature
+---
 
-📄 Research Paper Implementation
+## 📦 Deployment & Usage
 
-🚀 This Repository (Production/Demo)
+### 🌐 Live Demo
+* **Frontend:** [Access the UI here](https://effulgent-duckanoo-083431.netlify.app/)
+* **Backend:** [View the Space](https://huggingface.co/spaces/Migueldiaz1/mirage-backend)
 
-Justification (Why?)
+### 💻 Local Development
+If you wish to run the notebook or backend locally, please refer to the **Kaggle Notebook** linked above. It contains the complete installation pipeline:
 
-Embeddings
-
-Real-time CLIP inference on the full dataset.
-
-Pre-computed Vectors (.npy)
-
-Extreme Speed. We avoid processing 80k+ images for every query. Vectors are loaded directly into RAM, making retrieval instant on CPU.
-
-Metadata
-
-SQL Database Queries.
-
-Lightweight JSON
-
-Low Latency. Removes the overhead of database connections, keeping the app portable and self-contained.
-
-Generation
-
-Stable Diffusion v1.5 / v2.1 (50 steps).
-
-LCM (Latent Consistency Models)
-
-Efficiency. Standard SD takes ~30s on a T4 GPU. By switching to LCM, we generate high-quality images in 4-8 steps, reducing wait times to seconds.
-
-"These changes democratize access to advanced Medical AI, allowing MIRAGE to run on a laptop or a free Hugging Face Space."
-
-🧠 Core Features
-
-1. Visual Retrieval (CLIP MedICaT)
-
-We use a CLIP model fine-tuned on the ROCO dataset (Radiology Objects in Context). Unlike keyword matching, this understands the visual content of the query.
-
-2. Dual Search (Latent Arithmetic)
-
-This is the system's flagship feature. It allows users to perform vector arithmetic on medical concepts:
-
-
-$$V_{result} = V_{query} - V_{sub} + V_{add}$$
-
-
-Example: Visualizing a "Pneumothorax" by taking a healthy lung X-ray vector and mathematically adding the "collapsed lung" feature vector.
-
-3. Augmented Generation
-
-For rare conditions where data is scarce, MIRAGE generates synthetic examples using Prompt2MedImage (optimized via LCM lora), providing students with infinite visual variations of a pathology.
-
-💻 Local Installation
-
-To run MIRAGE locally on your machine:
-
-1. Clone & Hydrate Data
-
-CRITICAL: The vector embeddings (>200MB) are stored in Hugging Face, not GitHub. You must run the download script.
-
-# Clone repository
-git clone [https://github.com/migueldiaz1/mirage.git](https://github.com/migueldiaz1/mirage.git)
-cd mirage
-
-# Install dependencies
-pip install -r requirements.txt
-
-# ⚠️ DOWNLOAD HEAVY DATA (Embeddings & Metadata)
-python download_data.py
-
-
-2. Run Backend
-
-python app.py
-# Server starts at http://localhost:7860
-
-
-3. Run Frontend
-
-Open a new terminal:
-
-cd frontend
-npm install
-
-# IMPORTANT: Update API_URL in src/App.jsx to "[http://127.0.0.1:7860](http://127.0.0.1:7860)"
-npm run dev
-
-
-🐳 Docker Support
-
-Run the entire stack in a container:
-
-docker build -t mirage-os .
-docker run -p 7860:7860 mirage-os
+```bash
+# Example setup from the notebook
+pip install diffusers transformers accelerate peft
+pip install gradio
