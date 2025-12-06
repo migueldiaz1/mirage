@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* --- BASE DARK MODE PREMIUM --- */
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -13,13 +12,11 @@ body {
   overflow-x: hidden;
 }
 
-/* Color de selección de texto (Naranja eléctrico) */
 ::selection {
   background-color: #f97316;
   color: white;
 }
 
-/* --- SCROLLBAR PERSONALIZADA --- */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -38,7 +35,6 @@ body {
   background: #f97316; /* Orange 500 */
 }
 
-/* Animación de brillo para botones */
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
