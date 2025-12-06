@@ -45,24 +45,24 @@
 
 <h2 style="color: #F97316;">OVERVIEW</h2>
 
-<strong style="color: #F97316;">MIRAGE</strong> is a multimodal system designed to revolutionize medical education. [cite_start]It allows students to navigate the complex relationships between medical texts and images through a shared latent space[cite: 7].
+<strong style="color: #F97316;">MIRAGE</strong> is a multimodal system designed to revolutionize medical education. It allows students to navigate the complex relationships between medical texts and images through a shared latent space.
 
-[cite_start]Unlike static atlases or unreliable web searches[cite: 6], MIRAGE enables semantic retrieval, synthetic image generation, and <strong style="color: #F97316;">conceptual algebra</strong>. [cite_start]This allows users to mathematically modify medical conditions (e.g., "Subtract Bones" from a "Chest X-Ray") to visualize specific pathologies[cite: 50, 115].
+Unlike static atlases or unreliable web searches, MIRAGE enables semantic retrieval, synthetic image generation, and <strong style="color: #F97316;">conceptual algebra</strong>. This allows users to mathematically modify medical conditions (e.g., "Subtract Bones" from a "Chest X-Ray") to visualize specific pathologies.
 
 ---
 
 <h2 style="color: #F97316;">MICCAI 2025 PAPER</h2>
 
-[cite_start]This project is the official implementation of the research presented at the <strong style="color: #F97316;">4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025</strong>[cite: 1, 2].
+This project is the official implementation of the research presented at the <strong style="color: #F97316;">4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025</strong>.
 
-[cite_start]The system is built upon a fine-tuned medical version of <strong style="color: #F97316;">CLIP (MedICaT-ROCO)</strong> trained on the ROCO dataset[cite: 8]. [cite_start]It maps both text and images to a shared latent space, enabling semantically meaningful queries[cite: 7, 62].
+The system is built upon a fine-tuned medical version of <strong style="color: #F97316;">CLIP (MedICaT-ROCO)</strong> trained on the ROCO dataset. It maps both text and images to a shared latent space, enabling semantically meaningful queries.
 
 <h3 style="color: #FDBA74;">Core Research Features</h3>
 
-* [cite_start]<strong style="color: #F97316;">Multimodal Retrieval:</strong> Finds clinically relevant images from verified sources[cite: 7].
-* [cite_start]<strong style="color: #F97316;">Latent Arithmetic (Dual Search):</strong> Enables visual comparison of different medical conditions by subtracting/adding concept vectors[cite: 10, 49].
-* [cite_start]<strong style="color: #F97316;">Generative AI:</strong> Synthesizes new medical images using diffusion models[cite: 9].
-* [cite_start]<strong style="color: #F97316;">LLM Enrichment:</strong> Generates detailed descriptions using Large Language Models[cite: 9].
+* <strong style="color: #F97316;">Multimodal Retrieval:</strong> Finds clinically relevant images from verified sources.
+* <strong style="color: #F97316;">Latent Arithmetic (Dual Search):</strong> Enables visual comparison of different medical conditions by subtracting/adding concept vectors.
+* <strong style="color: #F97316;">Generative AI:</strong> Synthesizes new medical images using diffusion models.
+* <strong style="color: #F97316;">LLM Enrichment:</strong> Generates detailed descriptions using Large Language Models.
 
 ---
 
@@ -71,12 +71,12 @@
 To ensure this web deployment runs efficiently on standard CPU environments (like the Hugging Face free tier) without requiring the heavy GPU resources described in the original paper, we have implemented specific engineering optimizations.
 
 <h3 style="color: #FDBA74;">1. Precomputed Embeddings (Speed Optimization)</h3>
-[cite_start]While the paper describes a pipeline that processes images dynamically[cite: 61], this deployment uses <strong style="color: #F97316;">precomputed vector embeddings</strong>.
+While the paper describes a pipeline that processes images dynamically, this deployment uses <strong style="color: #F97316;">precomputed vector embeddings</strong>.
 * **Paper:** CLIP Vision Transformer runs in real-time.
 * **Web Deployment:** We cached the CLIP embeddings for the ROCO dataset. This allows for <strong style="color: #F97316;">O(1) retrieval speed</strong>, skipping the heavy visual encoding step during user queries.
 
 <h3 style="color: #FDBA74;">2. Latent Consistency Models (LCM)</h3>
-[cite_start]The paper utilizes *Prompt2MedImage* (Standard Stable Diffusion) which typically requires 50 steps for high-quality generation[cite: 9, 142].
+The paper utilizes *Prompt2MedImage* (Standard Stable Diffusion) which typically requires 50 steps for high-quality generation.
 * **Paper:** High inference time (~40-60s).
 * **Web Deployment:** We utilize <strong style="color: #F97316;">LCM (Latent Consistency Models)</strong>. This reduces the inference requirement to just <strong style="color: #F97316;">4-8 steps</strong>, enabling image synthesis in seconds on a CPU.
 
@@ -87,13 +87,13 @@ We decoupled the dataset metadata (captions, paths) into a lightweight JSON stru
 
 <h2 style="color: #F97316;">HOW IT WORKS: LATENT ARITHMETIC</h2>
 
-[cite_start]The system enables concept-level comparison via latent space manipulation[cite: 51]. When a user defines a "Dual Search", we perform vector arithmetic:
+The system enables concept-level comparison via latent space manipulation. When a user defines a "Dual Search", we perform vector arithmetic:
 
 <h3 align="center" style="color: #F97316;">Vector<sub>modified</sub> = Vector<sub>query</sub> - Vector<sub>subtract</sub> + Vector<sub>add</sub></h3>
 
 <br/>
 
-[cite_start]For example, subtracting the concept **"Bones"** from a **"Chest X-Ray"** vector forces the system to retrieve or generate soft-tissue specific visualizations[cite: 120, 124].
+For example, subtracting the concept **"Bones"** from a **"Chest X-Ray"** vector forces the system to retrieve or generate soft-tissue specific visualizations.
 
 ---
 
