@@ -3,7 +3,7 @@
 <h1 style="color: #F97316; font-size: 3em;">MIRAGE</h1>
 <h3 style="color: #FDBA74;">Retrieval and Generation of Multimodal Images and Texts for Medical Education</h3>
 
-<br/><br/>
+<br/>
 
 <h2 style="color: #F97316;">SYSTEM ACCESS POINTS</h2>
 
@@ -43,17 +43,16 @@
 
 ---
 
+<h2 style="color: #F97316;">MICCAI 2025 PAPER</h2>
+
+This project is the official implementation of the research presented at the <strong style="color: #F97316;">4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025</strong>.
+
+
 <h2 style="color: #F97316;">OVERVIEW</h2>
 
 Access to diverse, well-annotated medical images with interactive learning tools is fundamental for training practitioners in medicine and related fields to improve their diagnostic skills and understanding of anatomical structures. While medical atlases are valuable, they are often impractical due to their size and lack of interactivity, whereas on- line image search may provide mislabeled or incomplete material. To address this, we propose MIRAGE, a multimodal medical text and image retrieval and generation system that allows users to find and generate clinically relevant images from trustworthy sources by mapping both text and images to a shared latent space, enabling semantically meaningful queries. The system is based on a fine-tuned medical version of CLIP (MedICaT-ROCO), trained with the ROCO dataset, obtained from PubMed Central. MIRAGE allows users to give prompts to retrieve images, generate synthetic ones through a medical diffusion model (Prompt2MedImage) and receive enriched descriptions from a large language model (Dolly-v2-3b). It also supports a dual search option, enabling the visual comparison of different medical conditions. A key advantage of the system is that it relies entirely on publicly available pretrained models, ensuring reproducibility and accessibility. Our goal is to provide a free, transparent and easy-to-use didactic tool for medical students, especially those without programming skills. The system features an interface that enables interactive and personalized visual learning through medical image retrieval and generation. The system is accessible to medical students worldwide without requiring local computational resources or technical expertise.
 
 ---
-
-<h2 style="color: #F97316;">MICCAI 2025 PAPER</h2>
-
-This project is the official implementation of the research presented at the <strong style="color: #F97316;">4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025</strong>.
-
-The system is built upon a fine-tuned medical version of <strong style="color: #F97316;">CLIP (MedICaT-ROCO)</strong> trained on the ROCO dataset. It maps both text and images to a shared latent space, enabling semantically meaningful queries.
 
 <h3 style="color: #FDBA74;">Core Research Features</h3>
 
