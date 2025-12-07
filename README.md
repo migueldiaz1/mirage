@@ -1,13 +1,13 @@
 <div align="center">
 
-<h1 style="color: #F97316; font-size: 3em;">MIRAGE</h1>
-<h3 style="color: #FDBA74;">Retrieval and Generation of Multimodal Images and Texts for Medical Education</h3>
+<h1>MIRAGE</h1>
+<h3>Retrieval and Generation of Multimodal Images and Texts for Medical Education</h3>
 
 <br/>
 
-<h2 style="color: #F97316;">SYSTEM ACCESS POINTS</h2>
+<h2>SYSTEM ACCESS POINTS</h2>
 
-<table style="border: none;">
+<table>
 <tr>
 <td align="center" width="33%">
 <a href="https://effulgent-duckanoo-083431.netlify.app/">
@@ -43,60 +43,35 @@
 
 ---
 
-<h2 style="color: #F97316;">MICCAI 2025 PAPER</h2>
+## MICCAI 2025 PAPER
 
-This project is the official implementation of the research presented at the <strong style="color: #F97316;">4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025</strong>.
+This project is the official implementation of the research presented at the **4th Workshop on Applications of Medical AI (AMAI), MICCAI 2025**.
 
-
-<h2 style="color: #F97316;">OVERVIEW</h2>
+## OVERVIEW
 
 Access to diverse, well-annotated medical images with interactive learning tools is fundamental for training practitioners in medicine and related fields to improve their diagnostic skills and understanding of anatomical structures. While medical atlases are valuable, they are often impractical due to their size and lack of interactivity, whereas on- line image search may provide mislabeled or incomplete material. To address this, we propose MIRAGE, a multimodal medical text and image retrieval and generation system that allows users to find and generate clinically relevant images from trustworthy sources by mapping both text and images to a shared latent space, enabling semantically meaningful queries. The system is based on a fine-tuned medical version of CLIP (MedICaT-ROCO), trained with the ROCO dataset, obtained from PubMed Central. MIRAGE allows users to give prompts to retrieve images, generate synthetic ones through a medical diffusion model (Prompt2MedImage) and receive enriched descriptions from a large language model (Dolly-v2-3b). It also supports a dual search option, enabling the visual comparison of different medical conditions. A key advantage of the system is that it relies entirely on publicly available pretrained models, ensuring reproducibility and accessibility. Our goal is to provide a free, transparent and easy-to-use didactic tool for medical students, especially those without programming skills. The system features an interface that enables interactive and personalized visual learning through medical image retrieval and generation. The system is accessible to medical students worldwide without requiring local computational resources or technical expertise.
 
 ---
 
-<h3 style="color: #FDBA74;">Core Research Features</h3>
+## OPTIMIZATIONS: CHANGES FROM THE PAPER
 
-* <strong style="color: #F97316;">Multimodal Retrieval:</strong> Finds clinically relevant images from verified sources.
-* <strong style="color: #F97316;">Latent Arithmetic (Dual Search):</strong> Enables visual comparison of different medical conditions by subtracting/adding concept vectors.
-* <strong style="color: #F97316;">Generative AI:</strong> Synthesizes new medical images using diffusion models.
-* <strong style="color: #F97316;">LLM Enrichment:</strong> Generates detailed descriptions using Large Language Models.
+To ensure the web deployment on standard CPU environments (like the Hugging Face free tier) without requiring the heavy GPU resources described in the original paper, we have implemented specific adaptations.
 
----
+### 1. Precomputed Embeddings (Speed Optimization)
+While the paper describes a pipeline that processes images dynamically, this deployment uses **precomputed vector embeddings**.
+* **Paper:** CLIP Vision Transformer runs in real-time when the system is initialized.
+* **Web Deployment:** We cached the CLIP embeddings for the ROCO dataset. This allows for **O(1) retrieval speed**, skipping the heavy visual encoding step during user queries.
 
-<h2 style="color: #F97316;">OPTIMIZATIONS: CHANGES FROM THE PAPER</h2>
-
-To ensure this web deployment runs efficiently on standard CPU environments (like the Hugging Face free tier) without requiring the heavy GPU resources described in the original paper, we have implemented specific engineering optimizations.
-
-<h3 style="color: #FDBA74;">1. Precomputed Embeddings (Speed Optimization)</h3>
-While the paper describes a pipeline that processes images dynamically, this deployment uses <strong style="color: #F97316;">precomputed vector embeddings</strong>.
-* **Paper:** CLIP Vision Transformer runs in real-time.
-* **Web Deployment:** We cached the CLIP embeddings for the ROCO dataset. This allows for <strong style="color: #F97316;">O(1) retrieval speed</strong>, skipping the heavy visual encoding step during user queries.
-
-<h3 style="color: #FDBA74;">2. Latent Consistency Models (LCM)</h3>
-The paper utilizes *Prompt2MedImage* (Standard Stable Diffusion) which typically requires 50 steps for high-quality generation.
-* **Paper:** High inference time (~40-60s).
-* **Web Deployment:** We utilize <strong style="color: #F97316;">LCM (Latent Consistency Models)</strong>. This reduces the inference requirement to just <strong style="color: #F97316;">4-8 steps</strong>, enabling image synthesis in seconds on a CPU.
-
-<h3 style="color: #FDBA74;">3. Metadata Indexing</h3>
-We decoupled the dataset metadata (captions, paths) into a lightweight JSON structure. This ensures the search engine remains responsive and lightweight, loading only the necessary textual data for the results.
+### 2. Latent Consistency Models (LCM)
+The paper utilizes Prompt2MedImage (Standard Stable Diffusion) which typically requires 30 to 50 steps for high-quality generation.
+* **Paper:** High inference time (~40-60s) in GPU.
+* **Web Deployment:** We use **LCM (Latent Consistency Models)**. This reduces the inference requirement to just **some steps (4 to 10)**, enabling image synthesis in a reasonable time on a CPU.
 
 ---
 
-<h2 style="color: #F97316;">HOW IT WORKS: LATENT ARITHMETIC</h2>
+## CITATION
 
-The system enables concept-level comparison via latent space manipulation. When a user defines a "Dual Search", we perform vector arithmetic:
-
-<h3 align="center" style="color: #F97316;">Vector<sub>modified</sub> = Vector<sub>query</sub> - Vector<sub>subtract</sub> + Vector<sub>add</sub></h3>
-
-<br/>
-
-For example, subtracting the concept **"Bones"** from a **"Chest X-Ray"** vector forces the system to retrieve or generate soft-tissue specific visualizations.
-
----
-
-<h2 style="color: #F97316;">CITATION</h2>
-
-If you use MIRAGE in your research, please cite our MICCAI 2025 paper:
+If you use MIRAGE in your research, please cite our MICCAI 2025 paper (NOTE: in press):
 
 ```bibtex
 @inproceedings{diazbenito2025mirage,
