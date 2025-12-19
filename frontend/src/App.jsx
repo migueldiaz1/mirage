@@ -343,7 +343,7 @@ const PaperExplanation = ({ onBack }) => {
                             {[
                                 { title: "Retrieval", sub: "CLIP MedICaT", icon: Search, color: "orange" },
                                 { title: "Generation", sub: "Prompt2MedImage", icon: Wand2, color: "red" },
-                                { title: "Description", sub: "Dolly-v2 LLM", icon: AlignLeft, color: "amber" }
+                                { title: "Description", sub: "Gemini-2.5-flash (Changed from original paper due to HF limitations)", icon: AlignLeft, color: "amber" }
                             ].map((item, i) => (
                                 <motion.div 
                                     key={i}
