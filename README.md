@@ -10,7 +10,7 @@
 <table>
 <tr>
 <td align="center" width="33%">
-<a href="https://effulgent-duckanoo-083431.netlify.app/">
+<a href="https://mirageos.netlify.app/">
 <img src="https://img.shields.io/badge/Frontend_UI-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=black" height="35" />
 </a>
 <br/>
