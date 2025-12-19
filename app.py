@@ -1,26 +1,24 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import torch
 import open_clip
 import numpy as np
 import json
 import os
-import requests
-from fastapi.middleware.cors import CORSMiddleware
 import base64
 from datasets import load_dataset
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from huggingface_hub import login
-import google.generativeai as genai 
 from typing import Optional, List, Any, Dict, Union
-from diffusers import StableDiffusionPipeline, LCMScheduler
+from diffusers import StableDiffusionPipeline
+from transformers import pipeline
 
 app = FastAPI(title="MIRAGE")
 
+from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -30,44 +28,40 @@ app.add_middleware(
 )
 
 # Models
-MODEL_NAME = 'hf-hub:luhuitong/CLIP-ViT-L-14-448px-MedICaT-ROCO'
+CLIP_MODEL_NAME = 'hf-hub:luhuitong/CLIP-ViT-L-14-448px-MedICaT-ROCO'
+SD_MODEL_ID = "Nihirc/Prompt2MedImage" 
+LLM_MODEL_ID = "databricks/dolly-v2-3b" 
 HF_DATASET_ID = "mdwiratathya/ROCO-radiology"
 SPLIT = "train"
-device = "cpu"
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Glob variables
-model = None
-tokenizer = None
+clip_model = None
+clip_tokenizer = None
 embeddings = None       
 metadata = None
 dataset_stream = None 
-gemini_available = False
-pipe = None 
+generate_text_pipeline = None 
+sd_pipe = None 
 
 # authentication
 try:
     hf_token = os.environ.get('HF_TOKEN')
     if hf_token:
         login(token=hf_token)
-    
-    google_key = os.environ.get('GOOGLE_API_KEY')
-    if google_key:
-        genai.configure(api_key=google_key)
-        gemini_available = True
-    
 except Exception as e:
-    print(f"Error auth: {e}")
+    print(f"Warning Auth: {e}")
 
-# to handle if there's an error
+# to handle if there's an error showing the image
 def create_placeholder_image(text="Image Error"):
     img = Image.new('RGB', (512, 512), color=(40, 40, 45))
     d = ImageDraw.Draw(img)
     try:
-        font = ImageFont.truetype("arial.ttf", 20)
+        font = ImageFont.load_default()
     except:
         font = None
-        
-    d.text((20, 200), f"No Image Available", fill=(255, 100, 100), font=font)
+    d.text((20, 200), "No Image Available", fill=(255, 100, 100), font=font)
     d.text((20, 230), f"{text}", fill=(200, 200, 200), font=font)
     img_byte_arr = BytesIO()
     img.save(img_byte_arr, format='JPEG')
@@ -75,242 +69,267 @@ def create_placeholder_image(text="Image Error"):
 
 # load the data
 @app.on_event("startup")
-async def load_data():
-    global model, tokenizer, embeddings, metadata, dataset_stream, pipe
-    model, _, _ = open_clip.create_model_and_transforms(MODEL_NAME, device=device)
-    tokenizer = open_clip.get_tokenizer(MODEL_NAME)
-    model.eval()
-
-    # load metadata
-    if os.path.exists("metadata_text.json"):
-        with open("metadata_text.json", 'r') as f:
-            metadata = json.load(f)
-    elif os.path.exists("metadata.json"):
-        with open("metadata.json", 'r') as f:
-            metadata = json.load(f)
-    else:
-        print("no metadata file found")
-        metadata = [{"dataset_index": 0, "filename": "error", "caption": "Error"}]
-
-    # load the embdeddings of the images (already processed)
-    embeddings = np.load("embeddings.npy")
-    print(f"✅ Image Embeddings listos: {embeddings.shape[0]} registros.")
-
-    # load the dataset
-    dataset_stream = load_dataset(HF_DATASET_ID, split=SPLIT, streaming=False) 
-
-    # Load the Stable Diffusion LCM Pipeline
-    model_id = "Nihirc/Prompt2MedImage"
-    pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float32)
-    pipe.load_lora_weights("latent-consistency/lcm-lora-sdv1-5")
-    pipe.fuse_lora() 
-    pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config, solver_order=2)
-    pipe.safety_checker = None
-    pipe.requires_safety_checker = False
+async def load_models():
+    global clip_model, clip_tokenizer, embeddings, metadata, dataset_stream, sd_pipe, generate_text_pipeline
     
-    if device == "cpu":
-        pipe = pipe.to("cpu")
-        pipe.enable_attention_slicing() 
-    else:
-        pipe = pipe.to("cuda")
+    clip_model, _, _ = open_clip.create_model_and_transforms(CLIP_MODEL_NAME, device=device)
+    clip_tokenizer = open_clip.get_tokenizer(CLIP_MODEL_NAME)
+    clip_model.eval()
 
-def calculate_vector(text, add=None, sub=None):
+    with open("metadata.json", 'r') as f:
+        metadata = json.load(f)
+    
+    embeddings = np.load("embeddings.npy")
+    
+    dataset_stream = load_dataset(HF_DATASET_ID, split=SPLIT, streaming=False)
+
+    sd_pipe = StableDiffusionPipeline.from_pretrained(SD_MODEL_ID, torch_dtype=torch.float32)
+    sd_pipe.safety_checker = None 
+    sd_pipe.requires_safety_checker = False
+    sd_pipe = sd_pipe.to(device)
+
+    try:
+        generate_text_pipeline = pipeline(
+            model=LLM_MODEL_ID, 
+            torch_dtype=torch.bfloat16 if device=="cuda" else torch.float32, 
+            trust_remote_code=True, 
+            device_map="auto"
+        )
+    except Exception as e:
+        generate_text_pipeline = None
+
+    
+def calculate_clip_vector(text):
     with torch.no_grad():
-        # the user gives us a text, we obtain the embedding using CLIP
-        text_tokens = tokenizer([text]).to(device)
-        vec = model.encode_text(text_tokens)
-        vec /= vec.norm(dim=-1, keepdim=True)
-        if add and add.strip():
-            add_vec = model.encode_text(tokenizer([add]).to(device))
-            add_vec /= add_vec.norm(dim=-1, keepdim=True)
-            vec = vec + add_vec
-        if sub and sub.strip():
-            sub_vec = model.encode_text(tokenizer([sub]).to(device))
-            sub_vec /= sub_vec.norm(dim=-1, keepdim=True)
-            vec = vec - sub_vec
+        text_tokens = clip_tokenizer([text]).to(device)
+        vec = clip_model.encode_text(text_tokens)
         vec /= vec.norm(dim=-1, keepdim=True)
         return vec
 
-def get_retrieval_and_context(query_vector, top_k):
-    # We compare the query (text) embd with the image embeddings to retrieve
+def perform_arithmetic(base_text, add_text, sub_text):
+    vec_base = calculate_clip_vector(base_text)
+    
+    if add_text and add_text.strip():
+        vec_add = calculate_clip_vector(add_text)
+        vec_base = vec_base + vec_add
+        
+    if sub_text and sub_text.strip():
+        vec_sub = calculate_clip_vector(sub_text)
+        vec_base = vec_base - vec_sub
+        
+    vec_base /= vec_base.norm(dim=-1, keepdim=True)
+    return vec_base
+
+def search_embeddings(query_vector, k=3):
     query_vec_np = query_vector.cpu().numpy()
-    
-   
-    # query_vec_np (1, 768), embeddings (N, 768) -> result (N,)
-    sim_img = (query_vec_np @ embeddings.T).squeeze()
-    best_indices = sim_img.argsort()[-top_k:][::-1]
-    
-    real_matches = []
-    retrieved_captions = []
+    similarities = (query_vec_np @ embeddings.T).squeeze()
+    best_indices = similarities.argsort()[-k:][::-1]
+    return best_indices, similarities
 
-    for idx in best_indices:
+def get_captions_from_indices(indices):
+    captions = []
+    for idx in indices:
         idx = int(idx)
-        if idx >= len(metadata): continue
-        
-        meta = metadata[idx]
-        safe_index = meta.get('dataset_index', idx)
-        
-        real_matches.append({
-            "url": f"/image/{safe_index}",
-            "score": float(sim_img[idx]), 
-            "filename": meta.get("filename", "img"),
-            "caption": meta.get("caption", ""),
-            "index": safe_index 
-        })
+        if idx < len(metadata):
+            cap = metadata[idx].get("caption", "")
+            if cap:
+                captions.append(cap)
+    return captions
 
-        cap = meta.get("caption", "")
-        if cap and len(cap) > 5: 
-            retrieved_captions.append(cap)
-        
-    return real_matches, retrieved_captions
-
-def generate_llm_prompt(captions, user_text):
-    if not gemini_available or not captions:
-        return user_text + ". " + (captions[0] if captions else "")
+def generate_dolly_description(user_query, context_captions):
+    if not generate_text_pipeline:
+        return "LLM not available."
+    
+    context_str = ". ".join(context_captions[:3])
+    prompt = f"Explain the medical condition '{user_query}' concisely using these findings: {context_str}"
+    
     try:
-        llm = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = f"Using the following medical query: '{user_text}', synthesize these findings into a concise radiology description: {', '.join(captions[:3])}"
-        res = llm.generate_content(prompt)
-        return res.text.strip()
-    except: 
-        return user_text
+        res = generate_text_pipeline(prompt, max_new_tokens=100)
+        return res[0]["generated_text"]
+    except Exception as e:
+        print(f"Error Dolly: {e}")
+        return user_query
 
-def generate_synthetic_image(prompt, steps=5, guidance=1.5):
-    global pipe
-    if pipe is None: return None
+# Updated to accept steps and guidance arguments
+def generate_synthetic_image_sd(prompt, steps=50, guidance=7.5):
+    if sd_pipe is None: return None
     try:
-        NEGATIVE_PROMPT = "painting, artistic, drawing, illustration, blur, low quality, distorted, abstract, text, watermark, grid, noise, glitch"
-        image = pipe(prompt[:77], height=512, width=512, num_inference_steps=steps, guidance_scale=guidance, negative_prompt=NEGATIVE_PROMPT).images[0]
+        image = sd_pipe(prompt, num_inference_steps=steps, guidance_scale=guidance).images[0]
         
         draw = ImageDraw.Draw(image)
-        text = "Created by MIRAGE"
+        text_mark = "MIRAGE Synthetic"
         try: font = ImageFont.load_default() 
         except: font = None
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        draw.text((image.width - text_w - 20, image.height - text_h - 15), text, fill=(255, 225, 210), font=font)
+        draw.text((10, image.height - 20), text_mark, fill=(255, 255, 255), font=font)
 
         buffered = BytesIO()
         image.save(buffered, format="JPEG")
         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
         return f"data:image/jpeg;base64,{img_str}"
     except Exception as e:
-        print(f"Error Gen Image: {e}")
+        print(f"Error SD Generation: {e}")
         return None
 
-def fetch_image_from_stream(index):
-    if dataset_stream is None: return None
-    try:
-        idx = int(index)
-        return dataset_stream[idx]['image']
-    except Exception: return None
-
-
 # ENDPOINTS
-@app.get("/api/health")
-def health_check(): 
-    return {"status": "online", "version": "lite"}
-
 @app.get("/image/{index}")
 def get_image(index: str):
     if index in ["None", "", "undefined"]: return Response(content=create_placeholder_image("Invalid"), media_type="image/jpeg")
-    if dataset_stream is None: return Response(content=create_placeholder_image("Loading..."), media_type="image/jpeg")
+    if dataset_stream is None: return Response(content=create_placeholder_image("Loading Data..."), media_type="image/jpeg")
     try:
         idx_int = int(float(index))
-        if idx_int < 0 or idx_int >= len(dataset_stream): return Response(content=create_placeholder_image("Out of Bounds"), media_type="image/jpeg")
-        img = fetch_image_from_stream(idx_int)
-        if img:
+        real_idx = idx_int 
+        if 0 <= real_idx < len(dataset_stream):
+            img = dataset_stream[real_idx]['image']
             if img.mode != 'RGB': img = img.convert('RGB')
             b = BytesIO()
             img.save(b, format='JPEG')
             return Response(content=b.getvalue(), media_type="image/jpeg")
     except Exception: pass
-    return Response(content=create_placeholder_image("Error"), media_type="image/jpeg")
+    return Response(content=create_placeholder_image("Not Found"), media_type="image/jpeg")
 
 class GenerationRequest(BaseModel):
     original_text: str
     sub_concept: Optional[str] = None
     add_concept: Optional[str] = None
     top_k: int = 3
-    gen_text: bool = True
-    gen_image: bool = True
-    guidance_scale: float = 1.5   
-    num_inference_steps: int = 5
+    gen_text: bool = True       
+    gen_image: bool = True      
+    guidance_scale: float = 7.5 
+    num_inference_steps: int = 50 
 
-# this is the main endpoint
 @app.post("/generate_comparison")
 def generate_comparison(req: GenerationRequest):
-    if not model: raise HTTPException(status_code=503, detail="Loading...") 
-    try:
-        final_query = req.original_text
-        final_add = req.add_concept
-        final_sub = req.sub_concept
-        
-        response_data = {
-            "original_text": final_query,
-            "modified_text": final_query,
-            "original": {},
-            "modified": None,
-            "input_lang_detected": "raw"
-        }
+    if not clip_model: raise HTTPException(status_code=503, detail="Models Loading...")
+    
+    response_data = {
+        "original": None,
+        "modified": None,
+        "original_text": req.original_text,
+        "modified_text": ""
+    }
 
-        vec_orig = calculate_vector(final_query)
-        match_orig, caps_orig = get_retrieval_and_context(vec_orig, req.top_k)
+    # Retrieval (Always done)
+    vec_orig = calculate_clip_vector(req.original_text)
+    
+    # If Text Generation is enabled, we follow the Paper methodology (Context -> LLM -> Re-ranking)
+    # If disabled, we just use the initial retrieval as the result.
+    final_matches_orig = []
+    desc_display = "LLM generation skipped."
+    
+    if req.gen_text:
+        # Initial Retrieval for Context
+        idx_init, _ = search_embeddings(vec_orig, k=req.top_k)
+        captions_init = get_captions_from_indices(idx_init)
         
-        prompt_orig = ""
+        # LLM Enriched Description
+        desc_enriched_orig = generate_dolly_description(req.original_text, captions_init)
+        desc_display = desc_enriched_orig
+        
+        # Re-ranking 
+        vec_orig_refined = calculate_clip_vector(desc_enriched_orig)
+        idx_final, scores_final = search_embeddings(vec_orig_refined, k=req.top_k)
+        
+        for i, idx in enumerate(idx_final):
+             idx = int(idx)
+             meta = metadata[idx]
+             final_matches_orig.append({
+                "index": int(meta.get('dataset_index', idx)),
+                "score": float(scores_final[i]),
+                "caption": meta.get("caption", ""),
+                "url": f"/image/{int(meta.get('dataset_index', idx))}"
+             })
+    else:
+        # Standard Retrieval (No Re-ranking)
+        idx_final, scores_final = search_embeddings(vec_orig, k=req.top_k)
+        for i, idx in enumerate(idx_final):
+             idx = int(idx)
+             meta = metadata[idx]
+             final_matches_orig.append({
+                "index": int(meta.get('dataset_index', idx)),
+                "score": float(scores_final[i]),
+                "caption": meta.get("caption", ""),
+                "url": f"/image/{int(meta.get('dataset_index', idx))}"
+             })
+
+    # Image Generation 
+    img_syn_orig = ""
+    if req.gen_image:
+        img_syn_orig = generate_synthetic_image_sd(
+            req.original_text,
+            steps=req.num_inference_steps,
+            guidance=req.guidance_scale
+        )
+    
+    response_data["original"] = {
+        "real_match": final_matches_orig, 
+        "synthetic": {
+            "image_base64": img_syn_orig,
+            "generated_prompt": desc_display
+        }
+    }
+    
+    # dual search
+    if req.sub_concept and req.add_concept:
+        # Arithmetic
+        vec_mod = perform_arithmetic(req.original_text, req.add_concept, req.sub_concept)
+        mod_text_display = f"{req.original_text} + {req.add_concept} - {req.sub_concept}"
+        response_data["modified_text"] = mod_text_display
+        
+        final_matches_mod = []
+        desc_enriched_mod = "LLM generation skipped."
+        
         if req.gen_text:
-            prompt_orig = generate_llm_prompt(caps_orig, final_query)
-        else:
-            prompt_orig = "LLM generation skipped."
+             # Initial Retrieval Modified
+            idx_mod_init, _ = search_embeddings(vec_mod, k=req.top_k)
+            captions_mod = get_captions_from_indices(idx_mod_init)
             
-        img_orig_b64 = ""
-        if req.gen_image:
-            p_to_use = prompt_orig if req.gen_text else final_query
-            img_orig_b64 = generate_synthetic_image(p_to_use, steps=req.num_inference_steps, guidance=req.guidance_scale)
+            # LLM
+            desc_enriched_mod = generate_dolly_description(mod_text_display, captions_mod)
+            
+            # Re-Ranking Modified
+            vec_mod_refined = calculate_clip_vector(desc_enriched_mod)
+            idx_mod_final, scores_mod_final = search_embeddings(vec_mod_refined, k=req.top_k)
+            
+            for i, idx in enumerate(idx_mod_final):
+                 idx = int(idx)
+                 meta = metadata[idx]
+                 final_matches_mod.append({
+                    "index": int(meta.get('dataset_index', idx)),
+                    "score": float(scores_mod_final[i]),
+                    "caption": meta.get("caption", ""),
+                    "url": f"/image/{int(meta.get('dataset_index', idx))}"
+                 })
+        else:
+             idx_mod_final, scores_mod_final = search_embeddings(vec_mod, k=req.top_k)
+             for i, idx in enumerate(idx_mod_final):
+                 idx = int(idx)
+                 meta = metadata[idx]
+                 final_matches_mod.append({
+                    "index": int(meta.get('dataset_index', idx)),
+                    "score": float(scores_mod_final[i]),
+                    "caption": meta.get("caption", ""),
+                    "url": f"/image/{int(meta.get('dataset_index', idx))}"
+                 })
 
-        response_data["original"] = {
-            "real_match": match_orig, 
+        # Image Generation Modified
+        img_syn_mod = ""
+        if req.gen_image:
+            prompt_syn_mod = f"{req.original_text} {req.add_concept}" 
+            img_syn_mod = generate_synthetic_image_sd(
+                prompt_syn_mod,
+                steps=req.num_inference_steps,
+                guidance=req.guidance_scale
+            )
+        
+        response_data["modified"] = {
+            "real_match": final_matches_mod,
             "synthetic": {
-                "image_base64": img_orig_b64,
-                "generated_prompt": prompt_orig
+                "image_base64": img_syn_mod,
+                "generated_prompt": desc_enriched_mod
             }
         }
 
-        has_dual = (final_add and final_add.strip()) and (final_sub and final_sub.strip())
-        if has_dual:
-            vec_mod = calculate_vector(final_query, final_add, final_sub)
-            match_mod, caps_mod = get_retrieval_and_context(vec_mod, req.top_k)
-            
-            prompt_mod = ""
-            if req.gen_text:
-                prompt_mod = generate_llm_prompt(caps_mod, f"{final_query} + {final_add} - {final_sub}")
-            else:
-                prompt_mod = "LLM generation skipped."
-
-            img_mod_b64 = ""
-            if req.gen_image:
-                p_to_use_mod = prompt_mod if req.gen_text else f"{final_query} {final_add}"
-                img_mod_b64 = generate_synthetic_image(p_to_use_mod, steps=req.num_inference_steps, guidance=req.guidance_scale)
-                
-            response_data["modified"] = {
-                "real_match": match_mod,
-                "synthetic": {
-                    "image_base64": img_mod_b64,
-                    "generated_prompt": prompt_mod
-                }
-            }
-            response_data["modified_text"] = f"{final_query} + {final_add} - {final_sub}"
-
-        return response_data
-
-    except Exception as e:
-        print(f"🔥 Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/search")
-def search(req: GenerationRequest):
-    return generate_comparison(req)
-
+    return response_data
 
 # To create the frontend serving
 app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
