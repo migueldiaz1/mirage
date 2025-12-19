@@ -6,6 +6,7 @@ import torch
 import open_clip
 import numpy as np
 import json
+import google.generativeai as genai
 import os
 import base64
 from datasets import load_dataset
@@ -14,7 +15,6 @@ from PIL import Image, ImageDraw, ImageFont
 from huggingface_hub import login
 from typing import Optional, List, Any, Dict, Union
 from diffusers import StableDiffusionPipeline
-from transformers import pipeline
 
 app = FastAPI(title="MIRAGE")
 
@@ -30,7 +30,6 @@ app.add_middleware(
 # Models
 CLIP_MODEL_NAME = 'hf-hub:luhuitong/CLIP-ViT-L-14-448px-MedICaT-ROCO'
 SD_MODEL_ID = "Nihirc/Prompt2MedImage" 
-LLM_MODEL_ID = "databricks/dolly-v2-3b" 
 HF_DATASET_ID = "mdwiratathya/ROCO-radiology"
 SPLIT = "train"
 
@@ -42,18 +41,25 @@ clip_tokenizer = None
 embeddings = None       
 metadata = None
 dataset_stream = None 
-generate_text_pipeline = None 
 sd_pipe = None 
+gemini_available = False 
 
-# authentication
+# Authentication
 try:
+    # Hugging Face Auth
     hf_token = os.environ.get('HF_TOKEN')
     if hf_token:
         login(token=hf_token)
+    
+    # Google Gemini Auth
+    google_key = os.environ.get('GOOGLE_API_KEY')
+    genai.configure(api_key=google_key)
+    gemini_available = True
+        
 except Exception as e:
     print(f"Warning Auth: {e}")
 
-# to handle if there's an error showing the image
+# Helper: Placeholder Image
 def create_placeholder_image(text="Image Error"):
     img = Image.new('RGB', (512, 512), color=(40, 40, 45))
     d = ImageDraw.Draw(img)
@@ -67,36 +73,33 @@ def create_placeholder_image(text="Image Error"):
     img.save(img_byte_arr, format='JPEG')
     return img_byte_arr.getvalue()
 
-# load the data
+# Load Models
 @app.on_event("startup")
 async def load_models():
-    global clip_model, clip_tokenizer, embeddings, metadata, dataset_stream, sd_pipe, generate_text_pipeline
+    global clip_model, clip_tokenizer, embeddings, metadata, dataset_stream, sd_pipe
     
+    # Load CLIP
+    print("Loading CLIP...")
     clip_model, _, _ = open_clip.create_model_and_transforms(CLIP_MODEL_NAME, device=device)
     clip_tokenizer = open_clip.get_tokenizer(CLIP_MODEL_NAME)
     clip_model.eval()
 
+    # Load Metadata and Embeddings
+    print("Loading Metadata...")
     with open("metadata.json", 'r') as f:
         metadata = json.load(f)
     
     embeddings = np.load("embeddings.npy")
     
+    # Load Dataset
     dataset_stream = load_dataset(HF_DATASET_ID, split=SPLIT, streaming=False)
 
+    # Load Stable Diffusion
+    print("Loading Stable Diffusion...")
     sd_pipe = StableDiffusionPipeline.from_pretrained(SD_MODEL_ID, torch_dtype=torch.float32)
     sd_pipe.safety_checker = None 
     sd_pipe.requires_safety_checker = False
     sd_pipe = sd_pipe.to(device)
-
-    try:
-        generate_text_pipeline = pipeline(
-            model=LLM_MODEL_ID, 
-            torch_dtype=torch.bfloat16 if device=="cuda" else torch.float32, 
-            trust_remote_code=True, 
-            device_map="auto"
-        )
-    except Exception as e:
-        generate_text_pipeline = None
 
     
 def calculate_clip_vector(text):
@@ -136,25 +139,28 @@ def get_captions_from_indices(indices):
                 captions.append(cap)
     return captions
 
-def generate_dolly_description(user_query, context_captions):
-    if not generate_text_pipeline:
-        return "LLM not available."
+# LLM
+def generate_gemini_description(user_query, context_captions):
     
     context_str = ". ".join(context_captions[:3])
-    prompt = f"Explain the medical condition '{user_query}' concisely using these findings: {context_str}"
     
     try:
-        res = generate_text_pipeline(prompt, max_new_tokens=100)
-        return res[0]["generated_text"]
+        model = genai.GenerativeModel('gemini-2.5-flash')  # In paper we used Dolly (Bc of HF limitations we can't load everything in RAM) -> General model
+        prompt = f"Explain the medical condition '{user_query}' concisely using these findings from a database: {context_str}. Keep it short and clinical."
+        
+        response = model.generate_content(prompt)
+        return response.text.strip()
     except Exception as e:
-        print(f"Error Dolly: {e}")
+        print(f"Error Gemini API: {e}")
         return user_query
 
-# Updated to accept steps and guidance arguments
+# Stable Diffusion Generation
 def generate_synthetic_image_sd(prompt, steps=50, guidance=7.5):
     if sd_pipe is None: return None
     try:
-        image = sd_pipe(prompt, num_inference_steps=steps, guidance_scale=guidance).images[0]
+        # Recortar prompt si es muy largo (límite de CLIP tokenizer en SD)
+        clean_prompt = prompt[:77] 
+        image = sd_pipe(clean_prompt, num_inference_steps=steps, guidance_scale=guidance).images[0]
         
         draw = ImageDraw.Draw(image)
         text_mark = "MIRAGE Synthetic"
@@ -211,8 +217,6 @@ def generate_comparison(req: GenerationRequest):
     # Retrieval (Always done)
     vec_orig = calculate_clip_vector(req.original_text)
     
-    # If Text Generation is enabled, we follow the Paper methodology (Context -> LLM -> Re-ranking)
-    # If disabled, we just use the initial retrieval as the result.
     final_matches_orig = []
     desc_display = "LLM generation skipped."
     
@@ -221,8 +225,8 @@ def generate_comparison(req: GenerationRequest):
         idx_init, _ = search_embeddings(vec_orig, k=req.top_k)
         captions_init = get_captions_from_indices(idx_init)
         
-        # LLM Enriched Description
-        desc_enriched_orig = generate_dolly_description(req.original_text, captions_init)
+        # Important changed wrt paper: Gemini API instead of Dolly (Free tier limitations in HF)
+        desc_enriched_orig = generate_gemini_description(req.original_text, captions_init)
         desc_display = desc_enriched_orig
         
         # Re-ranking 
@@ -255,7 +259,7 @@ def generate_comparison(req: GenerationRequest):
     img_syn_orig = ""
     if req.gen_image:
         img_syn_orig = generate_synthetic_image_sd(
-            req.original_text,
+            req.original_text, # O usa desc_display si quieres que SD use el texto mejorado
             steps=req.num_inference_steps,
             guidance=req.guidance_scale
         )
@@ -283,8 +287,8 @@ def generate_comparison(req: GenerationRequest):
             idx_mod_init, _ = search_embeddings(vec_mod, k=req.top_k)
             captions_mod = get_captions_from_indices(idx_mod_init)
             
-            # LLM
-            desc_enriched_mod = generate_dolly_description(mod_text_display, captions_mod)
+            # LLM : Gemini API
+            desc_enriched_mod = generate_gemini_description(mod_text_display, captions_mod)
             
             # Re-Ranking Modified
             vec_mod_refined = calculate_clip_vector(desc_enriched_mod)
